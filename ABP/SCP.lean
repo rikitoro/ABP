@@ -113,10 +113,61 @@ def Current {α : Type} (s : State α) (p : Packet α) : Prop :=
   p.bit = s.sendBit ∧ ∃ xs, s.pending = p.payload :: xs
 
 /-- 送信準備完了 -/
-def Ready (s : State α) (done : List α) : Prop :=
+@[simp, grind]
+def Ready {α : Type} (s : State α) (done : List α) : Prop :=
   s.output = done ∧
   s.expectBit = s.sendBit ∧
   CellAll (fun p ↦ Old s p ∨ Current s p) s.dataCell ∧
   CellAll ( · = s.sendBit) s.ackCell
+
+/-- 受信側が1件進み、送信側はその確認を受けていない段階 -/
+@[simp, grind]
+def Delivered {α : Type} (s : State α) (done : List α) : Prop :=
+  ∃ x xs, s.pending = x :: xs ∧
+  s.output = done ++ [x] ∧
+  s.expectBit = !s.sendBit ∧
+  CellAll (fun p : Packet α ↦ p.bit = s.sendBit) s.dataCell
+
+/-- 不変条件 -/
+@[simp, grind]
+def Inv {α : Type} (input : List α) (s : State α) : Prop :=
+  ∃ done, input = done ++ s.pending ∧ (Ready s done ∨ Delivered s done)
+
+@[simp, grind ., grind! .]
+theorem intial_inv {α : Type} (input : List α) : Inv input (initial input) := by
+  simp
+
+@[simp, grind ., grind →]
+theorem inv_transmit {α : Type} {input : List α} {s : State α} {x : α} {xs : List α}
+  (hinv : Inv input s) (head : s.pending = x :: xs) :
+  Inv input (transmitData s x) := by
+  obtain ⟨done, hi, hrd⟩ := hinv
+  grind
+
+@[simp, grind ., grind →]
+theorem inv_receiveData {α : Type} {input : List α} {s : State α} {p : Packet α}
+  (hinv : Inv input s) (present : s.dataCell = some p) :
+  Inv input (receiveData s p) := by
+  obtain ⟨done, hi, hrd⟩ := hinv
+  grind
+
+@[simp, grind ., grind →]
+theorem inv_receiveAck {α : Type} {input : List α} {s : State α} {b : Bool}
+  (hinv : Inv input s) (present : s.ackCell = some b) :
+  Inv input (receiveAck s b) := by
+  obtain ⟨done, hi, hr | hd⟩ := hinv
+  · obtain ⟨ho, he, hdata, hack⟩ := hr
+    have hb : b = s.sendBit := by
+      grind
+    have hrecv : receiveAck s b = { s with ackCell := none } := by
+      cases hp : s.pending with grind
+    rw [hrecv]
+    grind
+  · obtain ⟨x, xs, hpend, ho, he, hdata⟩ := hd
+    by_cases hb : b = s.sendBit
+    · grind
+    · simp
+      grind
+
 
 end SCP
