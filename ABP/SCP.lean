@@ -195,6 +195,7 @@ theorem reachable_inv {α : Type} {input : List α} {s : State α}
   induction h with grind
 
 /-- 主定理 : 任意の有言実行の出力は入力列の接頭辞 -/
+@[simp, grind .]
 theorem safety {α : Type} {input : List α} {s : State α}
   (h : Reachable input s) :
   ∃ rest, input = s.output ++ rest := by
@@ -203,6 +204,68 @@ theorem safety {α : Type} {input : List α} {s : State α}
   · obtain ⟨x, xs, hp, _⟩ := hd
     simp_all
 
+/-- 全件確認済みなら出力は入力全体 -/
+@[simp, grind .]
+theorem completed {α : Type} {input : List α} {s : State α}
+  (h : Reachable input s) (hempty : s.pending = []) :
+  s.output = input := by
+  obtain ⟨done, hi, hrd⟩ := reachable_inv h
+  grind
+
+
 #print axioms safety
+#print axioms completed
+
+
+/-! ## 通信例 -/
+
+@[grind]
+inductive Event where
+  | sendData | recvData | sendAck | recvAck | loseData | loseAck | idle
+  deriving Repr, DecidableEq
+
+@[simp, grind]
+def tick {α : Type} (event : Event) (s : State α) : State α :=
+  match event with
+  | .sendData => match s.pending with
+    | [] => s
+    | x :: _ => transmitData s x
+  | .recvData => match s.dataCell with
+    | none => s
+    | some p => receiveData s p
+  | .sendAck => transmitAck s
+  | .recvAck => match s.ackCell with
+    | none => s
+    | some b => receiveAck s b
+  | .loseData => match s.dataCell with
+    | none => s
+    | some _ => { s with dataCell := none }
+  | .loseAck => match s.ackCell with
+    | none => s
+    | some _ => { s with ackCell := none }
+  | .idle => s
+
+@[simp, grind .]
+theorem tick_step {α : Type} (event : Event) (s : State α) :
+  Step s (tick event s) := by
+  grind
+
+@[simp, grind]
+def run {α : Type} (events : List Event) (s : State α): State α :=
+  match events with
+  | [] => s
+  | e :: es => run es <| tick e s
+
+@[simp, grind .]
+theorem run_reachable {α : Type} {input : List α} {s : State α}
+  (h : Reachable input s) (events : List Event) :
+  Reachable input (run events s) := by
+  induction events generalizing s with grind
+
+theorem run_safty {α : Type} (input : List α) (events : List Event) :
+  ∃ rest, input = (run events (initial input)).output ++ rest := by
+  apply safety
+  grind
+
 
 end SCP
