@@ -133,25 +133,30 @@ def Delivered {α : Type} (s : State α) (done : List α) : Prop :=
 def Inv {α : Type} (input : List α) (s : State α) : Prop :=
   ∃ done, input = done ++ s.pending ∧ (Ready s done ∨ Delivered s done)
 
-@[simp, grind ., grind! .]
+@[simp, grind .]
 theorem intial_inv {α : Type} (input : List α) : Inv input (initial input) := by
   simp
 
-@[simp, grind ., grind →]
-theorem inv_transmit {α : Type} {input : List α} {s : State α} {x : α} {xs : List α}
+@[simp, grind .]
+theorem inv_transmitData {α : Type} {input : List α} {s : State α} {x : α} {xs : List α}
   (hinv : Inv input s) (head : s.pending = x :: xs) :
   Inv input (transmitData s x) := by
   obtain ⟨done, hi, hrd⟩ := hinv
   grind
 
-@[simp, grind ., grind →]
+@[simp, grind .]
 theorem inv_receiveData {α : Type} {input : List α} {s : State α} {p : Packet α}
   (hinv : Inv input s) (present : s.dataCell = some p) :
   Inv input (receiveData s p) := by
   obtain ⟨done, hi, hrd⟩ := hinv
   grind
 
-@[simp, grind ., grind →]
+@[simp, grind .]
+theorem inv_transmitAck {α : Type} {input : List α} {s : State α}
+  (hinv : Inv input s) : Inv input (transmitAck s) := by
+  grind
+
+@[simp, grind .]
 theorem inv_receiveAck {α : Type} {input : List α} {s : State α} {b : Bool}
   (hinv : Inv input s) (present : s.ackCell = some b) :
   Inv input (receiveAck s b) := by
@@ -168,6 +173,36 @@ theorem inv_receiveAck {α : Type} {input : List α} {s : State α} {b : Bool}
     · grind
     · simp
       grind
+
+@[simp, grind .]
+theorem inv_loseData {α : Type} {input : List α} {s : State α}
+  (hinv : Inv input s) : Inv input { s with dataCell := none } := by
+  grind
+
+@[simp, grind .]
+theorem inv_loseAck {α : Type} {input : List α} {s : State α}
+  (hinv : Inv input s) : Inv input { s with ackCell := none } := by
+  grind
+
+@[simp, grind .]
+theorem step_preserves_inv {α : Type} {input : List α} {s t : State α}
+  (hinv : Inv input s) (hstep : Step s t) : Inv input t := by
+  cases hstep with grind
+
+ @[simp, grind .]
+theorem reachable_inv {α : Type} {input : List α} {s : State α}
+  (h : Reachable input s) : Inv input s := by
+  induction h with grind
+
+/-- 主定理 : 任意の有言実行の出力は入力列の接頭辞 -/
+theorem safety {α : Type} {input : List α} {s : State α}
+  (h : Reachable input s) :
+  ∃ rest, input = s.output ++ rest := by
+  obtain ⟨done, hi, hr | hd⟩ := reachable_inv h
+  · grind
+  · obtain ⟨x, xs, hp, _⟩ := hd
+    simp_all
+
 
 
 end SCP
