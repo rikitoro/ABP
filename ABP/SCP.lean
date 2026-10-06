@@ -189,7 +189,7 @@ theorem step_preserves_inv {α : Type} {input : List α} {s t : State α}
   (hinv : Inv input s) (hstep : Step s t) : Inv input t := by
   cases hstep with grind
 
- @[simp, grind .]
+@[simp, grind .]
 theorem reachable_inv {α : Type} {input : List α} {s : State α}
   (h : Reachable input s) : Inv input s := by
   induction h with grind
@@ -203,6 +203,6 @@ theorem safety {α : Type} {input : List α} {s : State α}
   · obtain ⟨x, xs, hp, _⟩ := hd
     simp_all
 
-
+#print axioms safety
 
 end SCP
