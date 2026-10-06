@@ -267,6 +267,9 @@ theorem run_safty {α : Type} (input : List α) (events : List Event) :
   apply safety
   grind
 
+#print axioms run_reachable
+#print axioms run_safty
+
 /-! ## 通信例 -/
 
 def normal : List Event := [.sendData, .recvData, .sendAck, .recvAck]
@@ -285,6 +288,10 @@ def ackLost : List Event :=
 example : (run ackLost (initial ["A", "B"])).output = ["A"] := by decide
 example : (run ackLost (initial ["A", "B"])).pending = ["B"] := by decide
 
+def staleAck : List Event := [.sendAck, .sendData, .recvData, .recvAck]
 
+example : (run staleAck (initial ["A", "B"])).output = ["A"] := by decide
+example : (run staleAck (initial ["A", "B"])).pending = ["A", "B"] := by decide
+example : (run (staleAck ++ [.sendAck, .recvAck]) (initial ["A", "B"])).pending = ["B"] := by decide
 
 end SCP
