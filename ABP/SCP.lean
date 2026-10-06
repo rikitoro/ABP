@@ -217,7 +217,7 @@ theorem completed {α : Type} {input : List α} {s : State α}
 #print axioms completed
 
 
-/-! ## 通信例 -/
+/-! ## イベント列 -/
 
 @[grind]
 inductive Event where
@@ -266,6 +266,25 @@ theorem run_safty {α : Type} (input : List α) (events : List Event) :
   ∃ rest, input = (run events (initial input)).output ++ rest := by
   apply safety
   grind
+
+/-! ## 通信例 -/
+
+def normal : List Event := [.sendData, .recvData, .sendAck, .recvAck]
+
+example : (run normal (initial ["A", "B"])).output = ["A"] := by decide
+example : (run normal (initial ["A", "B"])).pending = ["B"] := by decide
+
+def dataLost : List Event := [.sendData, .loseData] ++ normal
+
+example : (run dataLost (initial ["A", "B"])).output = ["A"] := by decide
+example : (run dataLost (initial ["A", "B"])).pending = ["B"] := by decide
+
+def ackLost : List Event :=
+  [.sendData, .recvData, .sendAck, .loseAck, .sendData, .recvData, .sendAck, .recvAck]
+
+example : (run ackLost (initial ["A", "B"])).output = ["A"] := by decide
+example : (run ackLost (initial ["A", "B"])).pending = ["B"] := by decide
+
 
 
 end SCP
