@@ -104,9 +104,55 @@ theorem loseAck_frame (s : State α) :
   (dropAck s).sender = s.sender ∧ (dropAck s).receiver = s.receiver :=
   ⟨rfl, rfl⟩
 
-end SCPModular.System
 
 /-! 有限イベント列による実行 -/
+@[grind]
 inductive Event where
   | send | recvData | sendAck | recvAck | loseData | loseAck | idle
   deriving Repr, DecidableEq
+
+@[simp, grind]
+def tick (e : Event) (s : State α) : State α :=
+  match e with
+  | .send => match Sender.emit s.sender with
+    | none => s
+    | some p => sendData s p
+  | .recvData => match s.network.dataCell with
+    | none => s
+    | some p => recvData s p
+  | .sendAck => sendAck s
+  | .recvAck => match s.network.ackCell with
+    | none => s
+    | some b => recvAck s b
+  | .loseData => match s.network.dataCell with
+    | none => s
+    | some _ => dropData s
+  | .loseAck => match s.network.ackCell with
+    | none => s
+    | some _ => dropAck s
+  | .idle => s
+
+@[simp, grind .]
+theorem tick_step (e : Event) (s : State α) : Step s (tick e s) := by
+  grind only [Step, tick]
+
+@[simp, grind]
+def run (events : List Event) (s : State α) : State α :=
+  match events with
+  | [] => s
+  | e :: es => run es (tick e s)
+
+@[simp, grind .]
+theorem run_reachable {input : List α} {s : State α}
+  (h : Reachable input s) (events : List Event) :
+  Reachable input (run events s) := by
+  induction events generalizing s with grind
+
+
+def trace (events : List Event) (s : State α) : List (State α) :=
+  match events with
+  | [] => [s]
+  | e :: es => s :: trace es (tick e s)
+
+
+end SCPModular.System
