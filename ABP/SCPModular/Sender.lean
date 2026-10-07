@@ -80,7 +80,7 @@ theorem initial_invariant (input : List α) :
   simp [Invariant]
 
 /-- 送信側の局所的契約 -/
-
+@[simp, grind .]
 theorem onAck_preserves {input confirmed delivered : List α}
   {s : State α} {b : Bool}
   (hinv : Invariant input confirmed delivered s)
